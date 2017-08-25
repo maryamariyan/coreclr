@@ -1073,11 +1073,11 @@ namespace System.Text
         {
             if (startIndex < 0)
             {
-                throw new ArgumentOutOfRangeException(nameof(startIndex), SR.GetResourceString("ArgumentOutOfRange_GenericPositive"));
+                throw new ArgumentOutOfRangeException(nameof(startIndex), SR.ArgumentOutOfRange_GenericPositive);
             }
             if (count < 0)
             {
-                throw new ArgumentOutOfRangeException(nameof(count), SR.GetResourceString("ArgumentOutOfRange_GenericPositive"));
+                throw new ArgumentOutOfRangeException(nameof(count), SR.ArgumentOutOfRange_GenericPositive);
             }
             Contract.Ensures(Contract.Result<StringBuilder>() != null);
             Contract.EndContractBlock();
@@ -1092,7 +1092,7 @@ namespace System.Text
             }
             if (count > value.Length - startIndex)
             {
-                throw new ArgumentOutOfRangeException(nameof(count), SR.GetResourceString("ArgumentOutOfRange_IndexLength"));
+                throw new ArgumentOutOfRangeException(nameof(count), SR.ArgumentOutOfRange_IndexLength);
             }
 
             if (count > 0)
@@ -1114,7 +1114,7 @@ namespace System.Text
             int newLength = Length + count;
             if ((uint)newLength > (uint)m_MaxCapacity)
             {
-                throw new ArgumentOutOfRangeException(nameof(count), SR.GetResourceString("ArgumentOutOfRange_LengthGreaterThanCapacity"));
+                throw new ArgumentOutOfRangeException(nameof(count), SR.ArgumentOutOfRange_LengthGreaterThanCapacity);
             }
 
             while (count > 0)
@@ -1165,7 +1165,7 @@ namespace System.Text
                                     }
                                     else
                                     {
-                                        throw new ArgumentOutOfRangeException(nameof(chunkCount), SR.GetResourceString("ArgumentOutOfRange_Index"));
+                                        throw new ArgumentOutOfRangeException(nameof(chunkCount), SR.ArgumentOutOfRange_Index);
                                     }
                                 }
                             }
