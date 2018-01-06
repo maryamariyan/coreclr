@@ -512,8 +512,6 @@ namespace System.Collections.Generic
 
         private void Resize(int newSize, bool forceNewHashCodes)
         {
-            Debug.Assert(newSize >= _entries.Length);
-
             int[] buckets = new int[newSize];
             for (int i = 0; i < buckets.Length; i++)
             {
@@ -775,6 +773,67 @@ namespace System.Collections.Generic
             int newSize = HashHelpers.GetPrime(capacity);
             Resize(newSize, forceNewHashCodes: false);
             return newSize;
+        }
+
+        /// <summary>
+        /// Sets the capacity of this dictionary to hold up at least all existing entries
+        /// 
+        /// This method can be used to minimize the memory overhead 
+        /// once it is known that no new elements will be added. 
+        /// 
+        /// To completely clear a dictionary and release all memory 
+        /// referenced by the dictionary, execute the following statements:
+        /// 
+        /// dictionary.Clear();
+        /// dictionary.TrimExcess();
+        /// </summary>
+        public void TrimExcess()
+        {
+            TrimExcess(HashHelpers.GetPrime(Count));
+        }
+
+        /// <summary>
+        /// Sets the capacity of this dictionary to hold up at least 'capacity' entries without any further expansion of its backing storage
+        /// </summary>
+        public void TrimExcess(int capacity)
+        {
+            if (capacity < Count)
+            {
+                ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.capacity);
+            }
+
+            if (_entries != null && capacity < _entries.Length)
+            {
+                int[] buckets = new int[capacity];
+                for (int i = 0; i < buckets.Length; i++)
+                {
+                    buckets[i] = -1;
+                }
+                int count = _count;
+                Entry[] entries = new Entry[capacity];
+                int k = 0;
+                for (int i = 0; i < count; i++)
+                {
+                    if (_entries[i].hashCode >= 0)
+                    {
+                        ref Entry entry = ref _entries[i];
+                        int bucket = entry.hashCode % capacity;
+                        entry.next = buckets[bucket];
+                        buckets[bucket] = i;
+                        entries[k] = entry;
+                        k++;
+                    }
+                }
+
+                Array.Clear(_entries, 0, count);
+                _freeList = -1;
+                _freeCount = 0;
+                _version++;
+                _count = k;
+
+                _buckets = buckets;
+                _entries = entries;
+            }
         }
 
         bool ICollection.IsSynchronized
