@@ -802,37 +802,40 @@ namespace System.Collections.Generic
                 ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.capacity);
             }
 
-            if (_entries != null && capacity < _entries.Length)
+            int newSize = HashHelpers.GetPrime(capacity);
+            if (_entries == null || newSize > _entries.Length)
             {
-                int[] buckets = new int[capacity];
-                for (int i = 0; i < buckets.Length; i++)
-                {
-                    buckets[i] = -1;
-                }
-                int count = _count;
-                Entry[] entries = new Entry[capacity];
-                int k = 0;
-                for (int i = 0; i < count; i++)
-                {
-                    if (_entries[i].hashCode >= 0)
-                    {
-                        ref Entry entry = ref _entries[i];
-                        int bucket = entry.hashCode % capacity;
-                        entry.next = buckets[bucket];
-                        buckets[bucket] = i;
-                        entries[k] = entry;
-                        k++;
-                    }
-                }
-                
-                _freeList = -1;
-                _freeCount = 0;
-                _version++;
-                _count = k;
-
-                _buckets = buckets;
-                _entries = entries;
+                return;
             }
+
+            int[] buckets = new int[newSize];
+            for (int i = 0; i < buckets.Length; i++)
+            {
+                buckets[i] = -1;
+            }
+            int count = _count;
+            Entry[] entries = new Entry[newSize];
+            int k = 0;
+            for (int i = 0; i < count; i++)
+            {
+                if (_entries[i].hashCode >= 0)
+                {
+                    ref Entry entry = ref _entries[i];
+                    int bucket = entry.hashCode % newSize;
+                    entry.next = buckets[bucket];
+                    buckets[bucket] = i;
+                    entries[k] = entry;
+                    k++;
+                }
+            }
+                
+            _freeList = -1;
+            _freeCount = 0;
+            _version++;
+            _count = k;
+
+            _buckets = buckets;
+            _entries = entries;
         }
 
         bool ICollection.IsSynchronized
