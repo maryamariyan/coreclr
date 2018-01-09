@@ -824,8 +824,7 @@ namespace System.Collections.Generic
                         k++;
                     }
                 }
-
-                Array.Clear(_entries, 0, count);
+                
                 _freeList = -1;
                 _freeCount = 0;
                 _version++;
