@@ -520,7 +520,6 @@ namespace System.Collections.Generic
             Entry[] entries = new Entry[newSize];
 
             int count = _count;
-            Array.Copy(_entries, 0, entries, 0, count);
 
             if (forceNewHashCodes)
             {
@@ -533,15 +532,24 @@ namespace System.Collections.Generic
                 }
             }
 
+            int k = 0;
             for (int i = 0; i < count; i++)
             {
-                if (entries[i].hashCode >= 0)
+                if (_entries[i].hashCode >= 0)
                 {
-                    int bucket = entries[i].hashCode % newSize;
-                    entries[i].next = buckets[bucket];
+                    ref Entry entry = ref _entries[i];
+                    int bucket = entry.hashCode % newSize;
+                    entry.next = buckets[bucket];
                     buckets[bucket] = i;
+                    entries[k] = entry;
+                    k++;
                 }
             }
+
+            _freeList = -1;
+            _freeCount = 0;
+            _version++;
+            _count = k;
 
             _buckets = buckets;
             _entries = entries;
