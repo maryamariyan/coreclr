@@ -815,35 +815,8 @@ namespace System.Collections.Generic
             {
                 return;
             }
-
-            int[] buckets = new int[newSize];
-            for (int i = 0; i < buckets.Length; i++)
-            {
-                buckets[i] = -1;
-            }
-            int count = _count;
-            Entry[] entries = new Entry[newSize];
-            int k = 0;
-            for (int i = 0; i < count; i++)
-            {
-                if (_entries[i].hashCode >= 0)
-                {
-                    ref Entry entry = ref _entries[i];
-                    int bucket = entry.hashCode % newSize;
-                    entry.next = buckets[bucket];
-                    buckets[bucket] = i;
-                    entries[k] = entry;
-                    k++;
-                }
-            }
-                
-            _freeList = -1;
-            _freeCount = 0;
-            _version++;
-            _count = k;
-
-            _buckets = buckets;
-            _entries = entries;
+            
+            Resize(newSize, forceNewHashCodes: false);
         }
 
         bool ICollection.IsSynchronized
