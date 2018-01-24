@@ -512,8 +512,7 @@ namespace System.Collections.Generic
 
         private void Resize(int newSize, bool forceNewHashCodes)
         {
-            Debug.Assert(newSize >= _entries.Length);
-
+            Debug.Assert(newSize >= Count);
             int[] buckets = new int[newSize];
             for (int i = 0; i < buckets.Length; i++)
             {
@@ -775,6 +774,76 @@ namespace System.Collections.Generic
             int newSize = HashHelpers.GetPrime(capacity);
             Resize(newSize, forceNewHashCodes: false);
             return newSize;
+        }
+
+        /// <summary>
+        /// Sets the capacity of this dictionary to what it would be if it had been originally initialized with all its entries
+        /// 
+        /// This method can be used to minimize the memory overhead 
+        /// once it is known that no new elements will be added. 
+        /// 
+        /// To completely clear a dictionary and release all memory 
+        /// referenced by the dictionary, execute the following statements:
+        /// 
+        /// dictionary.Clear();
+        /// dictionary.TrimExcess();
+        /// </summary>
+        public void TrimExcess()
+        {
+            TrimExcess(HashHelpers.GetPrime(Count));
+        }
+
+        /// <summary>
+        /// Sets the capacity of this dictionary to hold up 'capacity' entries without any further expansion of its backing storage
+        /// 
+        /// This method can be used to minimize the memory overhead 
+        /// once it is known that no new elements will be added. 
+        /// </summary>
+        public void TrimExcess(int capacity)
+        {
+            if (capacity < Count)
+                ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.capacity);
+            int newSize = HashHelpers.GetPrime(capacity);
+            int currentCapacity = _entries == null ? 0 : _entries.Length;
+            if (newSize >= currentCapacity)
+                return;
+            if (newSize < _count)
+            {
+                ref Entry[] entriesRef = ref _entries;
+                // Update free list to only include unused entries with index smaller than newSize
+                int index = _freeList;
+                int freeList = -1;
+                int next;
+                while (index != -1)
+                {
+                    next = entriesRef[index].next;
+                    if (index < newSize)
+                    {
+                        entriesRef[index].next = freeList;
+                        freeList = index;
+                    }
+                    index = next;
+                }
+
+                int count = _count;
+                // Move used entries in indices larger than newSize, to an unused location with index lower than newSize
+                for (int i = newSize; i < count; i++)
+                {
+                    if (entriesRef[i].hashCode >= 0)
+                    {
+                        index = freeList;
+                        freeList = entriesRef[index].next;
+                        ref Entry entry = ref entriesRef[i];
+                        entriesRef[index] = entry;
+                    }
+                }
+
+                _freeList = freeList;
+                _freeCount -= count - newSize;
+                _count -= count - newSize;
+                _version++;
+            }
+            Resize(newSize, forceNewHashCodes: false);
         }
 
         bool ICollection.IsSynchronized
