@@ -807,34 +807,27 @@ namespace System.Collections.Generic
             int newSize = HashHelpers.GetPrime(capacity);
             if (_entries == null || newSize > _entries.Length)
                 return;
-            int[] buckets = new int[newSize];
-            for (int i = 0; i < buckets.Length; i++)
-            {
-                buckets[i] = -1;
-            }
-            Entry[] entries = new Entry[newSize];
-            ref Entry[] oldEntries = ref _entries;
-            int count = _count;
+            Entry[] oldCopy = new Entry[_entries.Length];
+            int oldCount = _count;
+            Array.Copy(_entries, 0, oldCopy, 0, oldCount);
+            Initialize(newSize);
+            _freeCount = 0;
+            _version++;
+
             int k = 0;
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < oldCount; i++)
             {
-                if (oldEntries[i].hashCode >= 0)
+                if (oldCopy[i].hashCode >= 0)
                 {
-                    ref Entry entry = ref oldEntries[i];
+                    ref Entry entry = ref oldCopy[i];
                     int bucket = entry.hashCode % newSize;
-                    entry.next = buckets[bucket];
-                    buckets[bucket] = k;
-                    entries[k] = entry;
+                    entry.next = _buckets[bucket];
+                    _buckets[bucket] = k;
+                    _entries[k] = entry;
                     k++;
                 }
             }
-            _freeList = -1;
-            _freeCount = 0;
-            _version++;
             _count = k;
-
-            _buckets = buckets;
-            _entries = entries;
         }
 
         bool ICollection.IsSynchronized
