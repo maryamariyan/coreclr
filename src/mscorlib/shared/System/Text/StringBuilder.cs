@@ -270,27 +270,59 @@ namespace System.Text
             // Note: persist "m_currentThread" to be compatible with old versions
             info.AddValue(ThreadIDField, 0);
         }
-        
-        [System.Diagnostics.Conditional("DEBUG")]
-        private void DebugDump()
-        {
-            if (Length == 0)
-            {
-                return;
-            }
-            StringBuilder chunk = this;
-            // showing at most the last 10 chunks in this StringBuilder
-            const int maxChunksToPrint = 10;
-            var debugText = new StringBuilder();
-            for (int i = 0; chunk != null && i < maxChunksToPrint; i++)
-            {
-                debugText.Insert(0, "|" + new string(chunk.m_ChunkChars));
-                chunk = chunk.m_ChunkPrevious;
-            }
-            debugText.Append("|");
 
-            Debug.WriteLine(debugText.ToString().Replace("\0", "."));
+#if DEBUG
+        private void ShowTheChunks()
+        {
+            Debug.WriteLine(string.Join('|', ShowChunksInOrder()));
         }
+
+        private IEnumerable<string> ShowChunksInOrder()
+        {
+            const int maxToShow = 10;
+            Span<string> span = new string[maxToShow];
+            int numChunks = 0;
+            ShowChunks(this, span, ref numChunks, maxToShow);
+            return span.ToArray();
+        }
+
+        private void ShowChunks(StringBuilder sb, Span<string> span, ref int numToShow, int maxToShow)
+        {
+            if (sb.m_ChunkPrevious != null)
+                ShowChunks(sb.m_ChunkPrevious, span, ref numToShow, maxToShow);
+
+            if (numToShow < maxToShow)
+            {
+                span[numToShow] = string.Create(sb.m_ChunkChars.Length, sb.m_ChunkChars, (Span<char> chars, char[] src) =>
+                {
+                    for (int i = 0; i < src.Length; i++)
+                    {
+                        chars[i] = src[i];
+                    }
+                }).Replace('\0', '.');
+                numToShow++;
+            }
+        }
+        
+        //foo()
+        //{
+        //    int firstChunk = 0
+        //    Chunk nChunk = getNChunk(lastChunk, numberOfChunks, n, firstChunk);
+        //    dumpChunksFromLast(nChunk, numberChunks - n - 1 - firstChunk);
+        //    update first chunk index
+        //}
+
+        //dumpChunksFromLast(chunk, numberOfChunksToPrint)
+        //{
+        //    return string.Create(... (Span...) =>
+        //    while (chunk != null && numberOfChunksToPrint > 0)
+        //    {
+        //        iterate chunk and add chars to span backwards
+        //        numberOfChunksToPrint--;
+        //        chunk = chunk->next;
+        //    }
+        //}
+#endif
 
         [System.Diagnostics.Conditional("DEBUG")]
         private void AssertInvariants()
@@ -457,6 +489,7 @@ namespace System.Text
 
         public StringBuilder Clear()
         {
+            // Retain enough storage to store the same size content, plus 20% buffer, to help avoid reallocating during repeated use
             Capacity = Math.Max(DefaultCapacity, Math.Min(Capacity, (int)(Length * 1.2)));
             this.Length = 0;
             return this;
