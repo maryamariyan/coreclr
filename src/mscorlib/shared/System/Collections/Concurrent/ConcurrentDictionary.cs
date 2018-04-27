@@ -89,10 +89,6 @@ namespace System.Collections.Concurrent
             {
                 return true;
             }
-            if (valueType.IsEnum)
-            {
-                valueType = Enum.GetUnderlyingType(valueType);
-            }
 
             switch (Type.GetTypeCode(valueType))
             {
