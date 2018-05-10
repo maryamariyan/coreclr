@@ -491,7 +491,6 @@
     <Compile Include="$(BclSourcesRoot)\System\Threading\Tasks\TaskScheduler.cs" />
     <Compile Include="$(BclSourcesRoot)\System\Threading\Tasks\ThreadPoolTaskScheduler.cs" />
     <Compile Include="$(BclSourcesRoot)\System\Threading\Tasks\AsyncCausalityTracer.cs" />
-    <Compile Include="$(BclSourcesRoot)\System\Threading\Tasks\ConcurrentExclusiveSchedulerPair.cs" />
     <Compile Include="$(BclSourcesRoot)\System\Threading\Tasks\ProducerConsumerQueues.cs" />
     <Compile Include="$(BclSourcesRoot)\System\Threading\Tasks\TPLETWProvider.cs" />
     <Compile Condition="'$(FeatureCominterop)' == 'true'" Include="$(BclSourcesRoot)\System\Threading\Tasks\IAsyncCausalityTracerStatics.cs" />
@@ -569,10 +568,6 @@
     <Compile Include="$(BclSourcesRoot)\System\Collections\Generic\EqualityComparer.cs" />
     <Compile Include="$(BclSourcesRoot)\System\Collections\Generic\ArraySortHelper.cs" />
     <Compile Include="$(BclSourcesRoot)\System\Collections\ObjectModel\ReadOnlyDictionary.cs" />
-    <Compile Include="$(BclSourcesRoot)\System\Collections\Concurrent\ConcurrentStack.cs" />
-    <Compile Include="$(BclSourcesRoot)\System\Collections\Concurrent\IProducerConsumerCollection.cs" />
-    <Compile Include="$(BclSourcesRoot)\System\Collections\Concurrent\ConcurrentDictionary.cs" />
-    <Compile Include="$(BclSourcesRoot)\System\Collections\Concurrent\ConcurrentQueue.cs" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="$(BclSourcesRoot)\Microsoft\Win32\SafeHandles\SafeWaitHandle.cs" />
