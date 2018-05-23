@@ -49,6 +49,8 @@ namespace System.Collections.Generic
 
         internal static void ThrowOrIgnoreBadComparer(Object comparer)
         {
+            // This is hit when an invarant of QuickSort is violated due to a bad IComparer implementation (for
+            // example, imagine an IComparer that returns 0 when items are equal but -1 all other times).
             throw new ArgumentException(SR.Format(SR.Arg_BogusIComparer, comparer));
         }
     }
@@ -86,7 +88,7 @@ namespace System.Collections.Generic
 
         #region IArraySortHelper<T> Members
 
-        public void Sort(T[] keys, int index, int length, IComparer<T> comparer)
+        public static void Sort(T[] keys, int index, int length, IComparer<T> comparer)
         {
             Debug.Assert(keys != null, "Check the arguments in the caller!");
             Debug.Assert(index >= 0 && length >= 0 && (keys.Length - index >= length), "Check the arguments in the caller!");
@@ -112,7 +114,7 @@ namespace System.Collections.Generic
             }
         }
 
-        public int BinarySearch(T[] array, int index, int length, T value, IComparer<T> comparer)
+        public static int BinarySearch(T[] array, int index, int length, T value, IComparer<T> comparer)
         {
             try
             {
@@ -213,7 +215,7 @@ namespace System.Collections.Generic
             if (length < 2)
                 return;
 
-            IntroSort(keys, left, length + left - 1, 2 * IntrospectiveSortUtilities.FloorLog2PlusOne(length), comparer);
+            IntroSort(keys, left, length + left - 1, 2 * IntrospectiveSortUtilities.FloorLog2PlusOne(keys.Length), comparer);
         }
 
         private static void IntroSort(T[] keys, int lo, int hi, int depthLimit, Comparison<T> comparer)
