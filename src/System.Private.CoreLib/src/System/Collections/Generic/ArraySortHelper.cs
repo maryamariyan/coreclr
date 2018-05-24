@@ -2,22 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-/*============================================================
-**
-**
-** 
-**
-**
-** Purpose: class to sort arrays
-**
-** 
-===========================================================*/
-
-using System;
-using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Diagnostics;
-using System.Runtime.Versioning;
 
 namespace System.Collections.Generic
 {
@@ -49,11 +35,15 @@ namespace System.Collections.Generic
 
         internal static void ThrowOrIgnoreBadComparer(Object comparer)
         {
+            // This is hit when an invarant of QuickSort is violated due to a bad IComparer implementation (for
+            // example, imagine an IComparer that returns 0 when items are equal but -1 all other times).
             throw new ArgumentException(SR.Format(SR.Arg_BogusIComparer, comparer));
         }
     }
 
+#if CORECLR
     [TypeDependencyAttribute("System.Collections.Generic.GenericArraySortHelper`1")]
+#endif
     internal class ArraySortHelper<T>
         : IArraySortHelper<T>
     {
@@ -666,10 +656,16 @@ namespace System.Collections.Generic
         void Sort(TKey[] keys, TValue[] values, int index, int length, IComparer<TKey> comparer);
     }
 
+#if CORECLR
     [TypeDependencyAttribute("System.Collections.Generic.GenericArraySortHelper`2")]
+#endif
     internal class ArraySortHelper<TKey, TValue>
         : IArraySortHelper<TKey, TValue>
     {
+        // WARNING: We allow diagnostic tools to directly inspect this member (s_defaultArraySortHelper). 
+        // See https://github.com/dotnet/corert/blob/master/Documentation/design-docs/diagnostics/diagnostics-tools-contract.md for more details. 
+        // Please do not change the type, the name, or the semantic usage of this member without understanding the implication for tools. 
+        // Get in touch with the diagnostics team if you have questions.
         private static volatile IArraySortHelper<TKey, TValue> s_defaultArraySortHelper;
 
         public static IArraySortHelper<TKey, TValue> Default
@@ -731,6 +727,10 @@ namespace System.Collections.Generic
             Debug.Assert(comparer != null);
             Debug.Assert(0 <= a && a < keys.Length);
             Debug.Assert(0 <= b && b < keys.Length);
+#if !CORECLR
+            Debug.Assert(values == null || (0 <= a && a < values.Length));
+            Debug.Assert(values == null || (0 <= b && b < values.Length));
+#endif
 
             if (a != b)
             {
@@ -740,9 +740,12 @@ namespace System.Collections.Generic
                     keys[a] = keys[b];
                     keys[b] = key;
 
-                    TValue value = values[a];
-                    values[a] = values[b];
-                    values[b] = value;                    
+                    if (values != null)
+                    {
+                        TValue value = values[a];
+                        values[a] = values[b];
+                        values[b] = value;
+                    }
                 }
             }
         }
@@ -754,10 +757,12 @@ namespace System.Collections.Generic
                 TKey k = keys[i];
                 keys[i] = keys[j];
                 keys[j] = k;
-
-                TValue v = values[i];
-                values[i] = values[j];
-                values[j] = v;                
+                if (values != null)
+                {
+                    TValue v = values[i];
+                    values[i] = values[j];
+                    values[j] = v;
+                }
             }
         }
 
@@ -893,7 +898,7 @@ namespace System.Collections.Generic
             Debug.Assert(lo < keys.Length);
 
             TKey d = keys[lo + i - 1];
-            TValue dValue = values[lo + i - 1];
+            TValue dValue = (values != null) ? values[lo + i - 1] : default(TValue);
             int child;
             while (i <= n / 2)
             {
@@ -905,11 +910,13 @@ namespace System.Collections.Generic
                 if (!(comparer.Compare(d, keys[lo + child - 1]) < 0))
                     break;
                 keys[lo + i - 1] = keys[lo + child - 1];
-                values[lo + i - 1] = values[lo + child - 1];
+                if (values != null)
+                    values[lo + i - 1] = values[lo + child - 1];
                 i = child;
             }
             keys[lo + i - 1] = d;
-            values[lo + i - 1] = dValue;
+            if (values != null)
+                values[lo + i - 1] = dValue;
         }
 
         private static void InsertionSort(TKey[] keys, TValue[] values, int lo, int hi, IComparer<TKey> comparer)
@@ -928,15 +935,17 @@ namespace System.Collections.Generic
             {
                 j = i;
                 t = keys[i + 1];
-                tValue = values[i + 1];
+                tValue = (values != null) ? values[i + 1] : default(TValue);
                 while (j >= lo && comparer.Compare(t, keys[j]) < 0)
                 {
                     keys[j + 1] = keys[j];
-                    values[j + 1] = values[j];
+                    if (values != null)
+                        values[j + 1] = values[j];
                     j--;
                 }
                 keys[j + 1] = t;
-                values[j + 1] = tValue;
+                if (values != null)
+                    values[j + 1] = tValue;
             }
         }
     }
