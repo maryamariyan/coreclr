@@ -57,13 +57,13 @@ namespace System.Collections.Generic
     internal class ArraySortHelper<T>
         : IArraySortHelper<T>
     {
-        private static volatile IArraySortHelper<T> defaultArraySortHelper;
+        private static volatile IArraySortHelper<T> s_defaultArraySortHelper;
 
         public static IArraySortHelper<T> Default
         {
             get
             {
-                IArraySortHelper<T> sorter = defaultArraySortHelper;
+                IArraySortHelper<T> sorter = s_defaultArraySortHelper;
                 if (sorter == null)
                     sorter = CreateArraySortHelper();
 
@@ -75,13 +75,13 @@ namespace System.Collections.Generic
         {
             if (typeof(IComparable<T>).IsAssignableFrom(typeof(T)))
             {
-                defaultArraySortHelper = (IArraySortHelper<T>)RuntimeTypeHandle.Allocate(typeof(GenericArraySortHelper<string>).TypeHandle.Instantiate(new Type[] { typeof(T) }));
+                s_defaultArraySortHelper = (IArraySortHelper<T>)RuntimeTypeHandle.Allocate(typeof(GenericArraySortHelper<string>).TypeHandle.Instantiate(new Type[] { typeof(T) }));
             }
             else
             {
-                defaultArraySortHelper = new ArraySortHelper<T>();
+                s_defaultArraySortHelper = new ArraySortHelper<T>();
             }
-            return defaultArraySortHelper;
+            return s_defaultArraySortHelper;
         }
 
         #region IArraySortHelper<T> Members
@@ -670,13 +670,13 @@ namespace System.Collections.Generic
     internal class ArraySortHelper<TKey, TValue>
         : IArraySortHelper<TKey, TValue>
     {
-        private static volatile IArraySortHelper<TKey, TValue> defaultArraySortHelper;
+        private static volatile IArraySortHelper<TKey, TValue> s_defaultArraySortHelper;
 
         public static IArraySortHelper<TKey, TValue> Default
         {
             get
             {
-                IArraySortHelper<TKey, TValue> sorter = defaultArraySortHelper;
+                IArraySortHelper<TKey, TValue> sorter = s_defaultArraySortHelper;
                 if (sorter == null)
                     sorter = CreateArraySortHelper();
 
@@ -688,13 +688,13 @@ namespace System.Collections.Generic
         {
             if (typeof(IComparable<TKey>).IsAssignableFrom(typeof(TKey)))
             {
-                defaultArraySortHelper = (IArraySortHelper<TKey, TValue>)RuntimeTypeHandle.Allocate(typeof(GenericArraySortHelper<string, string>).TypeHandle.Instantiate(new Type[] { typeof(TKey), typeof(TValue) }));
+                s_defaultArraySortHelper = (IArraySortHelper<TKey, TValue>)RuntimeTypeHandle.Allocate(typeof(GenericArraySortHelper<string, string>).TypeHandle.Instantiate(new Type[] { typeof(TKey), typeof(TValue) }));
             }
             else
             {
-                defaultArraySortHelper = new ArraySortHelper<TKey, TValue>();
+                s_defaultArraySortHelper = new ArraySortHelper<TKey, TValue>();
             }
-            return defaultArraySortHelper;
+            return s_defaultArraySortHelper;
         }
 
         public void Sort(TKey[] keys, TValue[] values, int index, int length, IComparer<TKey> comparer)
