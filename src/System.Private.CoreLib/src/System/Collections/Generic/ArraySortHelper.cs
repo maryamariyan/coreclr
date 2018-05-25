@@ -9,11 +9,13 @@ namespace System.Collections.Generic
 {
     #region ArraySortHelper for single arrays
 
+#if CORECLR
     internal interface IArraySortHelper<TKey>
     {
         void Sort(TKey[] keys, int index, int length, IComparer<TKey> comparer);
         int BinarySearch(TKey[] keys, int index, int length, TKey value, IComparer<TKey> comparer);
     }
+#endif
 
     internal static class IntrospectiveSortUtilities
     {
@@ -45,8 +47,11 @@ namespace System.Collections.Generic
     [TypeDependencyAttribute("System.Collections.Generic.GenericArraySortHelper`1")]
 #endif
     internal class ArraySortHelper<T>
+#if CORECLR
         : IArraySortHelper<T>
+#endif
     {
+#if CORECLR
         private static volatile IArraySortHelper<T> s_defaultArraySortHelper;
 
         public static IArraySortHelper<T> Default
@@ -75,8 +80,13 @@ namespace System.Collections.Generic
         }
 
         #region IArraySortHelper<T> Members
+#endif
 
-        public void Sort(T[] keys, int index, int length, IComparer<T> comparer)
+        public 
+#if CORECLR
+        static
+#endif
+        void Sort(T[] keys, int index, int length, IComparer<T> comparer)
         {
             Debug.Assert(keys != null, "Check the arguments in the caller!");
             Debug.Assert(index >= 0 && length >= 0 && (keys.Length - index >= length), "Check the arguments in the caller!");
@@ -102,7 +112,11 @@ namespace System.Collections.Generic
             }
         }
 
-        public int BinarySearch(T[] array, int index, int length, T value, IComparer<T> comparer)
+        public 
+#if CORECLR
+        static
+#endif
+        int BinarySearch(T[] array, int index, int length, T value, IComparer<T> comparer)
         {
             try
             {
@@ -356,6 +370,7 @@ namespace System.Collections.Generic
         }
     }
 
+#if CORECLR
     internal class GenericArraySortHelper<T>
         : IArraySortHelper<T>
         where T : IComparable<T>
@@ -646,21 +661,24 @@ namespace System.Collections.Generic
             }
         }
     }
+#endif
 
     #endregion
 
     #region ArraySortHelper for paired key and value arrays
 
+#if CORECLR
     internal interface IArraySortHelper<TKey, TValue>
     {
         void Sort(TKey[] keys, TValue[] values, int index, int length, IComparer<TKey> comparer);
     }
 
-#if CORECLR
     [TypeDependencyAttribute("System.Collections.Generic.GenericArraySortHelper`2")]
 #endif
     internal class ArraySortHelper<TKey, TValue>
+#if CORECLR
         : IArraySortHelper<TKey, TValue>
+#endif
     {
         // WARNING: We allow diagnostic tools to directly inspect this member (s_defaultArraySortHelper). 
         // See https://github.com/dotnet/corert/blob/master/Documentation/design-docs/diagnostics/diagnostics-tools-contract.md for more details. 
@@ -682,21 +700,23 @@ namespace System.Collections.Generic
 
         private static IArraySortHelper<TKey, TValue> CreateArraySortHelper()
         {
+#if CORECLR
             if (typeof(IComparable<TKey>).IsAssignableFrom(typeof(TKey)))
             {
                 s_defaultArraySortHelper = (IArraySortHelper<TKey, TValue>)RuntimeTypeHandle.Allocate(typeof(GenericArraySortHelper<string, string>).TypeHandle.Instantiate(new Type[] { typeof(TKey), typeof(TValue) }));
             }
             else
-            {
+#endif
                 s_defaultArraySortHelper = new ArraySortHelper<TKey, TValue>();
-            }
             return s_defaultArraySortHelper;
         }
 
         public void Sort(TKey[] keys, TValue[] values, int index, int length, IComparer<TKey> comparer)
         {
             Debug.Assert(keys != null, "Check the arguments in the caller!");  // Precondition on interface method
+#if CORECLR
             Debug.Assert(values != null, "Check the arguments in the caller!");
+#endif
             Debug.Assert(index >= 0 && length >= 0 && (keys.Length - index >= length), "Check the arguments in the caller!");
 
             // Add a try block here to detect IComparers (or their
@@ -723,11 +743,11 @@ namespace System.Collections.Generic
         private static void SwapIfGreaterWithItems(TKey[] keys, TValue[] values, IComparer<TKey> comparer, int a, int b)
         {
             Debug.Assert(keys != null);
-            Debug.Assert(values != null && values.Length >= keys.Length);
             Debug.Assert(comparer != null);
             Debug.Assert(0 <= a && a < keys.Length);
             Debug.Assert(0 <= b && b < keys.Length);
 #if !CORECLR
+            Debug.Assert(values != null && values.Length >= keys.Length);
             Debug.Assert(values == null || (0 <= a && a < values.Length));
             Debug.Assert(values == null || (0 <= b && b < values.Length));
 #endif
@@ -892,7 +912,9 @@ namespace System.Collections.Generic
         private static void DownHeap(TKey[] keys, TValue[] values, int i, int n, int lo, IComparer<TKey> comparer)
         {
             Debug.Assert(keys != null);
+#if CORECLR
             Debug.Assert(values != null);
+#endif
             Debug.Assert(comparer != null);
             Debug.Assert(lo >= 0);
             Debug.Assert(lo < keys.Length);
@@ -950,6 +972,7 @@ namespace System.Collections.Generic
         }
     }
 
+#if CORECLR
     internal class GenericArraySortHelper<TKey, TValue>
         : IArraySortHelper<TKey, TValue>
         where TKey : IComparable<TKey>
@@ -1193,6 +1216,6 @@ namespace System.Collections.Generic
             }
         }
     }
-
+#endif
     #endregion
 }
