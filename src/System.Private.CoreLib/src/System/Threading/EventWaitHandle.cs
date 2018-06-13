@@ -36,7 +36,7 @@ namespace System.Threading
     using System.Security.AccessControl;
 
     [ComVisibleAttribute(true)]
-    public class EventWaitHandle : WaitHandle
+    public partial class EventWaitHandle : WaitHandle
     {
         private const uint AccessRights =
             (uint)Win32Native.MAXIMUM_ALLOWED | Win32Native.SYNCHRONIZE | Win32Native.EVENT_MODIFY_STATE;
