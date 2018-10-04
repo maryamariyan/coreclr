@@ -9,101 +9,293 @@ using System.Runtime.CompilerServices;
 
 namespace System.Diagnostics
 {
+    public static class DebugDelegateWrapper
+    {
+        internal static readonly object critSec = new object();
+        static DebugDelegateWrapper()
+        {
+            AutoFlushGet = () => true;
+            AutoFlushSet = (value) => {};
+            IndentLevelGet = () => DebugInternal.IndentLevelGet();
+            IndentLevelSet = (value) => { DebugInternal.IndentLevelSet(value); };
+            IndentSizeGet = () => DebugInternal.IndentSizeGet();
+            IndentSizeSet = (value) => { DebugInternal.IndentSizeSet(value); };
+            
+            AssertOverload1 = DebugInternal.Assert;
+            AssertOverload2 = DebugInternal.Assert;
+            AssertOverload3 = DebugInternal.Assert;
+            Close = DebugInternal.Close;
+            FailOverload1 = DebugInternal.Fail;
+            FailOverload2 = DebugInternal.Fail;
+            Flush = DebugInternal.Flush;
+            Indent = DebugInternal.Indent;
+            Unindent = DebugInternal.Unindent;
+            WriteOverload1 = DebugInternal.Write;
+            WriteOverload2 = DebugInternal.Write;
+            WriteOverload3 = DebugInternal.Write;
+            WriteOverload4 = DebugInternal.Write;
+            WriteLineOverload1 = DebugInternal.WriteLine;
+            WriteLineOverload2 = DebugInternal.WriteLine;
+            WriteLineOverload3 = DebugInternal.WriteLine;
+            WriteLineOverload4 = DebugInternal.WriteLine;
+        }
+
+        internal static Func<bool> AutoFlushGet;
+        internal static Action<bool> AutoFlushSet;
+        internal static Func<int> IndentLevelGet;
+        internal static Action<int> IndentLevelSet;
+        internal static Func<int> IndentSizeGet;
+        internal static Action<int> IndentSizeSet;
+        internal static Action<bool> AssertOverload1;
+        internal static Action<bool, string> AssertOverload2;
+        internal static Action<bool, string, string> AssertOverload3;
+        internal static Action Close;
+        internal static Action<string> FailOverload1;
+        internal static Action<string, string> FailOverload2;
+        internal static Action Flush;
+        internal static Action Indent;
+        internal static Action Unindent;
+        internal static Action<object> WriteOverload1;
+        internal static Action<object, string> WriteOverload2;
+        internal static Action<string> WriteOverload3;
+        internal static Action<string, string> WriteOverload4;
+        internal static Action<object> WriteLineOverload1;
+        internal static Action<object, string> WriteLineOverload2;
+        internal static Action<string> WriteLineOverload3;
+        internal static Action<string, string> WriteLineOverload4;
+
+        internal static class DebugInternal
+        {
+            private static readonly object s_lock = new object();
+            private static bool s_needIndent;
+            private static int s_indentSize = 4;
+            [ThreadStatic]
+            private static int s_indentLevel;
+
+            internal static int IndentLevelGet()
+            {
+                return s_indentLevel;
+            }
+
+            internal static void IndentLevelSet(int value)
+            {
+                s_indentLevel = value < 0 ? 0 : value;
+            }
+
+            internal static int IndentSizeGet()
+            {
+                return s_indentSize;
+            }
+
+            internal static void IndentSizeSet(int value)
+            {
+                s_indentSize = value < 0 ? 0 : value;
+            }
+
+            internal static void Assert(bool condition)
+            {
+                Assert(condition, string.Empty, string.Empty);
+            }
+
+            internal static void Assert(bool condition, string message)
+            {
+                Assert(condition, message, string.Empty);
+            }
+
+            internal static void Assert(bool condition, string message, string detailMessage)
+            {
+                if (!condition)
+                {
+                    string stackTrace;
+                    try
+                    {
+                        stackTrace = new StackTrace(0, true).ToString(System.Diagnostics.StackTrace.TraceFormat.Normal);
+                    }
+                    catch
+                    {
+                        stackTrace = "";
+                    }
+                    WriteLine(FormatAssert(stackTrace, message, detailMessage));
+                    Debug.s_ShowDialog(stackTrace, message, detailMessage, "Assertion Failed");
+                }
+            }
+
+            internal static void Close() { }
+
+            internal static void Fail(string message)
+            {
+                Assert(false, message, string.Empty);
+            }
+
+            internal static void Fail(string message, string detailMessage)
+            {
+                Assert(false, message, detailMessage);
+            }
+
+            internal static void Flush() { }
+
+            internal static void Indent()
+            {
+                Debug.IndentLevel++;
+            }
+
+            internal static void Unindent()
+            {
+                Debug.IndentLevel--;
+            }
+
+            internal static void Write(string message)
+            {
+                lock (s_lock)
+                {
+                    if (message == null)
+                    {
+                        Debug.s_WriteCore(string.Empty);
+                        return;
+                    }
+                    if (s_needIndent)
+                    {
+                        message = GetIndentString() + message;
+                        s_needIndent = false;
+                    }
+                    Debug.s_WriteCore(message);
+                    if (message.EndsWith(Environment.NewLine))
+                    {
+                        s_needIndent = true;
+                    }
+                }
+            }
+
+            internal static void Write(object value)
+            {
+                Write(value?.ToString());
+            }
+
+            internal static void Write(string message, string category)
+            {
+                if (category == null)
+                {
+                    Write(message);
+                }
+                else
+                {
+                    Write(category + ":" + message);
+                }
+            }
+
+            internal static void Write(object value, string category)
+            {
+                Write(value?.ToString(), category);
+            }
+
+            internal static void WriteLine(string message)
+            {
+                Write(message + Environment.NewLine);
+            }
+
+            internal static void WriteLine(object value)
+            {
+                WriteLine(value?.ToString());
+            }
+
+            internal static void WriteLine(object value, string category)
+            {
+                WriteLine(value?.ToString(), category);
+            }
+
+            internal static void WriteLine(string message, string category)
+            {
+                if (category == null)
+                {
+                    WriteLine(message);
+                }
+                else
+                {
+                    WriteLine(category + ":" + message);
+                }
+            }
+
+            private static string s_indentString;
+
+            internal static string GetIndentString()
+            {
+                int indentCount = IndentSizeGet() * IndentLevelGet();
+                if (s_indentString?.Length == indentCount)
+                {
+                    return s_indentString;
+                }
+                return s_indentString = new string(' ', indentCount);
+            }
+
+            internal static string FormatAssert(string stackTrace, string message, string detailMessage)
+            {
+                string newLine = GetIndentString() + Environment.NewLine;
+                return SR.DebugAssertBanner + newLine
+                    + SR.DebugAssertShortMessage + newLine
+                    + message + newLine
+                    + SR.DebugAssertLongMessage + newLine
+                    + detailMessage + newLine
+                    + stackTrace;
+            }
+        }
+    }
+
     /// <summary>
     /// Provides a set of properties and methods for debugging code.
     /// </summary>
     public static partial class Debug
     {
-        private static readonly object s_lock = new object();
-
-        public static bool AutoFlush { get { return true; } set { } }
-
-        [ThreadStatic]
-        private static int s_indentLevel;
-        public static int IndentLevel
+        static Debug()
         {
-            get
-            {
-                return s_indentLevel;
-            }
-            set
-            {
-                s_indentLevel = value < 0 ? 0 : value;
-            }
+            DebugDelegateWrapper.AutoFlushGet(); // just to make sure we call static constructor asap
         }
 
-        private static int s_indentSize = 4;
-        public static int IndentSize
-        {
-            get
-            {
-                return s_indentSize;
-            }
-            set
-            {
-                s_indentSize = value < 0 ? 0 : value;
-            }
-        }
+        public static bool AutoFlush { get { return DebugDelegateWrapper.AutoFlushGet(); } set { DebugDelegateWrapper.AutoFlushSet(value); } }
+
+        public static int IndentLevel { get { return DebugDelegateWrapper.IndentLevelGet(); } set { DebugDelegateWrapper.IndentLevelSet(value); } }
+
+        public static int IndentSize { get { return DebugDelegateWrapper.IndentSizeGet(); } set { DebugDelegateWrapper.IndentSizeSet(value); } }
 
         [System.Diagnostics.Conditional("DEBUG")]
-        public static void Close() { }
+        public static void Close() { DebugDelegateWrapper.Close(); }
 
         [System.Diagnostics.Conditional("DEBUG")]
-        public static void Flush() { }
+        public static void Flush() { DebugDelegateWrapper.Flush(); }
 
         [System.Diagnostics.Conditional("DEBUG")]
-        public static void Indent()
-        {
-            IndentLevel++;
-        }
+        public static void Indent() { DebugDelegateWrapper.Indent(); }
 
         [System.Diagnostics.Conditional("DEBUG")]
-        public static void Unindent()
-        {
-            IndentLevel--;
-        }
+        public static void Unindent() { DebugDelegateWrapper.Unindent(); }
 
         [System.Diagnostics.Conditional("DEBUG")]
         public static void Print(string message)
         {
-            Write(message);
+            DebugDelegateWrapper.WriteOverload3(message);
         }
 
         [System.Diagnostics.Conditional("DEBUG")]
         public static void Print(string format, params object[] args)
         {
-            Write(string.Format(null, format, args));
+            DebugDelegateWrapper.WriteOverload3(string.Format(null, format, args));
         }
 
         [System.Diagnostics.Conditional("DEBUG")]
         public static void Assert(bool condition)
         {
-            Assert(condition, string.Empty, string.Empty);
+            DebugDelegateWrapper.AssertOverload1(condition);
         }
 
         [System.Diagnostics.Conditional("DEBUG")]
         public static void Assert(bool condition, string message)
         {
-            Assert(condition, message, string.Empty);
+            DebugDelegateWrapper.AssertOverload2(condition, message);
         }
 
         [System.Diagnostics.Conditional("DEBUG")]
         public static void Assert(bool condition, string message, string detailMessage)
         {
-            if (!condition)
-            {
-                string stackTrace;
-                try
-                {
-                    stackTrace = new StackTrace(0, true).ToString(System.Diagnostics.StackTrace.TraceFormat.Normal);
-                }
-                catch
-                {
-                    stackTrace = "";
-                }
-                WriteLine(FormatAssert(stackTrace, message, detailMessage));
-                s_ShowDialog(stackTrace, message, detailMessage, "Assertion Failed");
-            }
+            DebugDelegateWrapper.AssertOverload3(condition, message, detailMessage);
         }
 
         internal static void ContractFailure(bool condition, string message, string detailMessage, string failureKindMessage)
@@ -119,7 +311,7 @@ namespace System.Diagnostics
                 {
                     stackTrace = "";
                 }
-                WriteLine(FormatAssert(stackTrace, message, detailMessage));
+                DebugDelegateWrapper.WriteLineOverload3(DebugDelegateWrapper.DebugInternal.FormatAssert(stackTrace, message, detailMessage));
                 s_ShowDialog(stackTrace, message, detailMessage, SR.GetResourceString(failureKindMessage));
             }
         }
@@ -127,115 +319,73 @@ namespace System.Diagnostics
         [System.Diagnostics.Conditional("DEBUG")]
         public static void Fail(string message)
         {
-            Assert(false, message, string.Empty);
+            DebugDelegateWrapper.FailOverload1(message);
         }
 
         [System.Diagnostics.Conditional("DEBUG")]
         public static void Fail(string message, string detailMessage)
         {
-            Assert(false, message, detailMessage);
-        }
-
-        private static string FormatAssert(string stackTrace, string message, string detailMessage)
-        {
-            string newLine = GetIndentString() + Environment.NewLine;
-            return SR.DebugAssertBanner + newLine
-                   + SR.DebugAssertShortMessage + newLine
-                   + message + newLine
-                   + SR.DebugAssertLongMessage + newLine
-                   + detailMessage + newLine
-                   + stackTrace;
+            DebugDelegateWrapper.FailOverload2(message, detailMessage);
         }
 
         [System.Diagnostics.Conditional("DEBUG")]
         public static void Assert(bool condition, string message, string detailMessageFormat, params object[] args)
         {
-            Assert(condition, message, string.Format(detailMessageFormat, args));
+            DebugDelegateWrapper.AssertOverload3(condition, message, string.Format(detailMessageFormat, args));
         }
 
         [System.Diagnostics.Conditional("DEBUG")]
         public static void WriteLine(string message)
         {
-            Write(message + Environment.NewLine);
+            DebugDelegateWrapper.WriteLineOverload3(message);
         }
 
         [System.Diagnostics.Conditional("DEBUG")]
         public static void Write(string message)
         {
-            lock (s_lock)
-            {
-                if (message == null)
-                {
-                    s_WriteCore(string.Empty);
-                    return;
-                }
-                if (s_needIndent)
-                {
-                    message = GetIndentString() + message;
-                    s_needIndent = false;
-                }
-                s_WriteCore(message);
-                if (message.EndsWith(Environment.NewLine))
-                {
-                    s_needIndent = true;
-                }
-            }
+            DebugDelegateWrapper.WriteOverload3(message);
         }
 
         [System.Diagnostics.Conditional("DEBUG")]
         public static void WriteLine(object value)
         {
-            WriteLine(value?.ToString());
+            DebugDelegateWrapper.WriteLineOverload1(value);
         }
 
         [System.Diagnostics.Conditional("DEBUG")]
         public static void WriteLine(object value, string category)
         {
-            WriteLine(value?.ToString(), category);
+            DebugDelegateWrapper.WriteLineOverload2(value, category);
         }
 
         [System.Diagnostics.Conditional("DEBUG")]
         public static void WriteLine(string format, params object[] args)
         {
-            WriteLine(string.Format(null, format, args));
+            DebugDelegateWrapper.WriteOverload1(string.Format(null, format, args));
         }
 
         [System.Diagnostics.Conditional("DEBUG")]
         public static void WriteLine(string message, string category)
         {
-            if (category == null)
-            {
-                WriteLine(message);
-            }
-            else
-            {
-                WriteLine(category + ":" + message);
-            }
+            DebugDelegateWrapper.WriteLineOverload4(message, category);
         }
 
         [System.Diagnostics.Conditional("DEBUG")]
         public static void Write(object value)
         {
-            Write(value?.ToString());
+            DebugDelegateWrapper.WriteOverload1(value);
         }
 
         [System.Diagnostics.Conditional("DEBUG")]
         public static void Write(string message, string category)
         {
-            if (category == null)
-            {
-                Write(message);
-            }
-            else
-            {
-                Write(category + ":" + message);
-            }
+            DebugDelegateWrapper.WriteOverload4(message, category);
         }
 
         [System.Diagnostics.Conditional("DEBUG")]
         public static void Write(object value, string category)
         {
-            Write(value?.ToString(), category);
+            DebugDelegateWrapper.WriteOverload2(value, category);
         }
 
         [System.Diagnostics.Conditional("DEBUG")]
@@ -243,7 +393,7 @@ namespace System.Diagnostics
         {
             if (condition)
             {
-                Write(message);
+                DebugDelegateWrapper.WriteOverload3(message);
             }
         }
 
@@ -252,7 +402,7 @@ namespace System.Diagnostics
         {
             if (condition)
             {
-                Write(value);
+                DebugDelegateWrapper.WriteOverload1(value);
             }
         }
 
@@ -261,7 +411,7 @@ namespace System.Diagnostics
         {
             if (condition)
             {
-                Write(message, category);
+                DebugDelegateWrapper.WriteOverload4(message, category);
             }
         }
 
@@ -270,7 +420,7 @@ namespace System.Diagnostics
         {
             if (condition)
             {
-                Write(value, category);
+                DebugDelegateWrapper.WriteOverload2(value, category);
             }
         }
 
@@ -279,7 +429,7 @@ namespace System.Diagnostics
         {
             if (condition)
             {
-                WriteLine(value);
+                DebugDelegateWrapper.WriteLineOverload1(value);
             }
         }
 
@@ -288,7 +438,7 @@ namespace System.Diagnostics
         {
             if (condition)
             {
-                WriteLine(value, category);
+                DebugDelegateWrapper.WriteLineOverload2(value, category);
             }
         }
 
@@ -297,7 +447,7 @@ namespace System.Diagnostics
         {
             if (condition)
             {
-                WriteLine(message);
+                DebugDelegateWrapper.WriteLineOverload3(message);
             }
         }
 
@@ -306,22 +456,8 @@ namespace System.Diagnostics
         {
             if (condition)
             {
-                WriteLine(message, category);
+                DebugDelegateWrapper.WriteLineOverload4(message, category);
             }
-        }
-
-        private static bool s_needIndent;
-
-        private static string s_indentString;
-
-        private static string GetIndentString()
-        {
-            int indentCount = IndentSize * IndentLevel;
-            if (s_indentString?.Length == indentCount)
-            {
-                return s_indentString;
-            }
-            return s_indentString = new string(' ', indentCount);
         }
 
         private sealed class DebugAssertException : Exception
