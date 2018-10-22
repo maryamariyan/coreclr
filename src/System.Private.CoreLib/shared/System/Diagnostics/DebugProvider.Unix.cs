@@ -38,7 +38,7 @@ namespace System.Diagnostics
             }
         }
 
-        private static void WriteCore(string message)
+        public virtual void Write(string message)
         {
             WriteToDebugger(message);
 

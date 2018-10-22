@@ -36,7 +36,7 @@ namespace System.Diagnostics
 
         private static readonly object s_ForLock = new object();
 
-        private static void WriteCore(string message)
+        public virtual void Write(string message)
         {
             // really huge messages mess up both VS and dbmon, so we chop it up into 
             // reasonable chunks if it's too big. This is the number of characters 

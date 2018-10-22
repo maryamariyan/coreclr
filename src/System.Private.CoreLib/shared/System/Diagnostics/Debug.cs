@@ -13,6 +13,7 @@ namespace System.Diagnostics
     /// </summary>
     public static partial class Debug
     {
+        private static readonly object s_lock = new object();
         private static DebugProvider s_provider = new DebugProvider();
 
         public static DebugProvider SetProvider(DebugProvider provider)
@@ -24,7 +25,7 @@ namespace System.Diagnostics
         }
 
         public static bool AutoFlush { get { return true; } set { } }
-
+        
         public static int IndentLevel
         {
             get
@@ -58,13 +59,13 @@ namespace System.Diagnostics
         [System.Diagnostics.Conditional("DEBUG")]
         public static void Indent()
         {
-            IndentLevel++;
+            s_provider.Indent();
         }
 
         [System.Diagnostics.Conditional("DEBUG")]
         public static void Unindent()
         {
-            IndentLevel--;
+            s_provider.Unindent();
         }
 
         [System.Diagnostics.Conditional("DEBUG")]
@@ -142,7 +143,7 @@ namespace System.Diagnostics
 
         private static string FormatAssert(string stackTrace, string message, string detailMessage)
         {
-            string newLine = DebugProvider.GetIndentString() + Environment.NewLine;
+            string newLine = s_provider.GetIndentString() + Environment.NewLine;
             return SR.DebugAssertBanner + newLine
                    + SR.DebugAssertShortMessage + newLine
                    + message + newLine
@@ -163,10 +164,29 @@ namespace System.Diagnostics
             Write(message + Environment.NewLine);
         }
 
+        private static bool s_needIndent = true;
+        
         [System.Diagnostics.Conditional("DEBUG")]
         public static void Write(string message)
         {
-            s_provider.Write(message);
+            lock (s_lock)
+            {
+                if (message == null)
+                {
+                    s_provider.Write(string.Empty);
+                    return;
+                }
+                if (s_needIndent)
+                {
+                    message = s_provider.GetIndentString() + message;
+                    s_needIndent = false;
+                }
+                s_provider.Write(message);
+                if (message.EndsWith(Environment.NewLine))
+                {
+                    s_needIndent = true;
+                }
+            }
         }
 
         [System.Diagnostics.Conditional("DEBUG")]
