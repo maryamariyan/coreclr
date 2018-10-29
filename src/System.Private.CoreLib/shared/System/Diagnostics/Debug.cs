@@ -13,14 +13,31 @@ namespace System.Diagnostics
     /// </summary>
     public static class Debug
     {
-        private static DebugProvider s_provider = new DebugProvider();
-
-        public static DebugProvider SetProvider(DebugProvider provider)
+        private static DebugInternal s_internal = new DebugInternal();
+        // Enables Debug to get wired with Trace Listeners
+        public static void ReplaceInternal(DebugInternal internal)
         {
-            if (provider == null)
-                throw new ArgumentNullException(nameof(provider));
+            if (internal == null)
+                throw new ArgumentNullException(nameof(internal));
 
-            return Interlocked.Exchange(ref s_provider, provider);
+            Interlocked.Exchange(ref s_internal, internal);
+        }
+
+        private static DebugProvider s_provider = new DebugProvider();
+        // Enables (WPF) user with option to override ShowDialog and Write logic
+        public static DebugProvider Provider
+        {
+            get
+            {
+                return s_provider;
+            }
+            set
+            {
+                if (value == null)
+                    throw new ArgumentNullException(nameof(value));
+
+                Interlocked.Exchange(ref s_provider, value);
+            }
         }
 
         public static bool AutoFlush { get { return true; } set { } }
@@ -36,7 +53,7 @@ namespace System.Diagnostics
             set
             {
                 t_indentLevel = value < 0 ? 0 : value;
-                s_provider.OnIndentLevelChanged(t_indentLevel);
+                s_internal.OnIndentLevelChanged(t_indentLevel);
             }
         }
 
@@ -50,7 +67,7 @@ namespace System.Diagnostics
             set
             {
                 s_indentSize = value < 0 ? 0 : value;
-                s_provider.OnIndentSizeChanged(s_indentSize);
+                s_internal.OnIndentSizeChanged(s_indentSize);
             }
         }
 
@@ -164,13 +181,13 @@ namespace System.Diagnostics
         [System.Diagnostics.Conditional("DEBUG")]
         public static void WriteLine(string message)
         {
-            s_provider.WriteLine(message);
+            s_internal.WriteLine(message);
         }
 
         [System.Diagnostics.Conditional("DEBUG")]
         public static void Write(string message)
         {
-            s_provider.Write(message);
+            s_internal.Write(message);
         }
 
         [System.Diagnostics.Conditional("DEBUG")]
