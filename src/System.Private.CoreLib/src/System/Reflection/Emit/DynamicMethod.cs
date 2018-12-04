@@ -513,7 +513,6 @@ namespace System.Reflection.Emit
             return null;
         }
 
-        [System.Security.SecuritySafeCritical]  // auto-generated
         public DynamicILInfo GetDynamicILInfo()
         {
 #pragma warning disable 618
@@ -526,7 +525,6 @@ namespace System.Reflection.Emit
             return GetDynamicILInfo(new DynamicScope());
         }
 
-        [System.Security.SecurityCritical]  // auto-generated
         internal DynamicILInfo GetDynamicILInfo(DynamicScope scope)
         {
             if (m_DynamicILInfo == null)
