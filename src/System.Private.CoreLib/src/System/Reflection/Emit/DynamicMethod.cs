@@ -515,10 +515,6 @@ namespace System.Reflection.Emit
 
         public DynamicILInfo GetDynamicILInfo()
         {
-#pragma warning disable 618
-            new SecurityPermission(SecurityPermissionFlag.UnmanagedCode).Demand();
-#pragma warning restore 618
-
             if (m_DynamicILInfo != null)
                 return m_DynamicILInfo;
 
